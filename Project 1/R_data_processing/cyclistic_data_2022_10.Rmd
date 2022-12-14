@@ -1,0 +1,131 @@
+---
+title: "Cyclistic_data_2022_10"
+author: "Kevin Ajith"
+date: "2022-12-06"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+
+
+## Cyclistic Data 
+
+The data is taken from [link](https://divvy-tripdata.s3.amazonaws.com/index.html) for the file updated on Nov 9th 2022, 04:17:10 am. 
+And is copyrighted under Motivate International Inc [[lisence](https://ride.divvybikes.com/data-license-agreement)].
+
+### Data Modification before Data Anlysis Process
+
+* Calculate the length of each ride by subtracting the column “started_at” from the column “ended_at” (for example,=D2-C2) and format as HH:MM:SS.
+* Create a column called “day_of_week,” and calculate the day of the week that each ride started.
+* 1 = Sunday and 7 = Saturday
+* Converted data for “started_at” and “ended_at” column to Date and Time Format
+* Removed "latitude" and "longitude", Since the data is not required for the analysis.
+
+
+### Library Required For Analysis
+
+```{r pakages, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+### Reading and storing csv file
+The data_trip data is the consolidated data taken from December 2021 to November 2022, And shows the latest trend among the people using **Cyclistic**. 
+
+This part of the code accumulated the data into one variable.
+
+```{r csv_reader, echo=TRUE}
+data_trip <- list.files(path="C:/Users/kevin/Desktop/DA/Case Study DA/1/Data Transform/2022-cleaned", full.names = TRUE) %>% 
+  lapply(read_csv) %>% 
+  bind_rows
+
+head(data_trip)
+```
+
+### Calculations on ride_length and day_of_week
+
+Mean and max can be found using the function using R as well as the Excel code
+
+* =MEAN()
+* =MAX()
+
+This Code gets some basic information about the data like mean and max ride lengths.
+
+```{r basic_calculations}
+
+data_trip %>% summarise(mean_ride_length = mean(ride_length),
+                             max_ride_length = max(ride_length))
+```
+
+
+### Plot For Member Vs Casual riders
+
+Before going for further analysis we need to find out how many rides are taken by casual and annual Cyclistic users.
+
+This part of the code take the information from data_trip and plots the bar graph for the same, also adding title and label layer
+
+```{r member_plot, message=FALSE, warning=FALSE}
+ggplot(data_trip,aes(x=member_casual, fill=member_casual)) + geom_bar() + 
+  stat_count(geom = "text", 
+             colour = "white", size = 3.5, 
+             aes(label = ..count..), 
+             position = position_stack(vjust = 0.5)) +
+  ggtitle("Number Of Casual Vs Anual Members") + xlab("Member Info") + ylab("Number Of Rides") 
+```
+Cyclistic has 2,346,876 casual users, Which is a great number when we compare to annual users of 3,386,575. This makes the percentage of casual users to be **40.93%**.
+
+### Plot: Bar Chart for day_of_week with respect to member_casual
+
+This Code finds the number of rides taken by Cyclistic ride user as per the days. 
+
+```{r member_day_plot, message=FALSE, warning=FALSE}
+ggplot(data_trip,aes(x=day_of_week, fill=member_casual))+geom_bar(position = "dodge") +
+  ggtitle("Riders Per Day Of Week") + xlab("Day Of Week") + ylab("Number Of Rides")
+```
+The Graph Clearly Shows that the casual riders use Cyclistic the most during Saturdays and Sundays which is significantly more than other days.
+
+
+### Plot: Bar Chart for Ride_length Vs day_of_week
+
+This code creates another data frame where it finds the mean ride length for each day with respect to the type of membership they hold.
+
+```{r mean_calculation, message=FALSE, warning=FALSE}
+data_trip_mean <- data_trip %>% 
+  group_by(day_of_week, member_casual) %>% 
+  summarise(mean_ride_length = mean(ride_length), .groups = "rowwise" )
+```
+
+This code prints the bar plot for the above calculated data frame.
+
+```{r Average_ride_duration, message=FALSE, warning=FALSE}
+ggplot(data_trip_mean,aes(x = day_of_week, y = mean_ride_length, color = member_casual)) + 
+  geom_line() +
+  ggtitle("Average Ride Length With Respect To Day Of Week") + 
+  xlab("Day Of Week") + ylab("Average Ride Length")
+```
+
+The plot clearly shows that the casual riders on average take longer timed trips as compared to annual members.
+
+### Plot: Bar Chart for Ride_length Vs month
+
+This code snippet compiles the membership status and month from "start_at" column. 
+
+```{r message=FALSE, warning=FALSE}
+data_month <- data_trip %>% 
+  arrange(started_at) %>% 
+  summarize(month = months(as.Date(started_at)), member_casual)
+```
+
+This Code is to plot the bar chart to find the number of rides per month with respect to the membership. 
+
+```{r message=FALSE, warning=FALSE}
+month_vals = c('January', 'February','March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December')
+
+ggplot(data_month,aes(x=factor(month, level=month_vals), fill= member_casual)) + 
+  geom_bar(position = "dodge") + ggtitle("Ride Count With Respect To Month") +
+  xlab("Month") + ylab("Number Of Rides")
+```
+
+This chart Specifies that casual as well as annual members peak during June, July and August. It is the least when it during January and February. 
+
