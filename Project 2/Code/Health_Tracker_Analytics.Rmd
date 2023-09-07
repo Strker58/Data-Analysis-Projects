@@ -1,0 +1,271 @@
+---
+title: "Health Tracker Analytics"
+author: "Kevin Ajith"
+date: "2023-07-29"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+# Summary
+Bellabeat is a successful small company, but they have the potential to become a larger player in the
+global smart device market. Urška Sršen, cofounder and Chief Creative Officer of Bellabeat, believes that analyzing smart device fitness data could help unlock new growth opportunities for the company.
+
+--- 
+
+# Ask
+
+### Business Task 
+Sršen asks us to analyze smart device usage data in order to gain insight into how consumers use non-Bellabeat smart devices. She then wants us to select one Bellabeat product to apply these insights to in our presentation. We have to find the following:
+
+1. Understanding how customers use smart devices
+2. Inform Bellabeat's marketing strategy for growth
+3. Get insights on key features to include in design of Bellabeat app or product to help with growth
+
+### Stakeholder
+
+1. Urška Sršen: Bellabeat’s Co-founder and Chief Creative Officer
+2. Sando Mur: Mathematician and Bellabeat’s Co-founder; key member of the Bellabeat Executive team
+3. Bellabeat marketing analytics team
+
+--- 
+
+# Prepare
+
+### Overview of the Data
+- Data is open-sourced
+- Data is taken from [Zendo](https://zenodo.org/record/53894#.YMoUpnVKiP9)
+- Data was uploaded by MORIUS
+- Data was downloaded from [Kaggle](https://www.kaggle.com/datasets/arashnic/fitbit)
+- There are 18 CSV files containing data
+- The data has 33 unique Ids.
+- Data contains fields like Intensities, Calories, Steps Taken, Distance Traveled and Sleep.
+- Data has been measured daily, hourly as well as in minutes.
+
+
+### Quality of Data
+- The data is inconsistent since the data was last updated in 2016.
+- The validation of data becomes difficult because of the above reason.
+- The data did not have duplicate or null values.
+- The data does not have identifiers for users as to protect the user information.
+- The User Ids are inconsistent in some CSV files since it is much less than 30 user Ids.
+
+--- 
+
+# Process
+
+### Filtering CSV 
+There is a lot of data and according to our requirement we need to have 30 ids for analysis. So we can remove data which do not meet the criteria. We can also remove data which are redundant or not required for analysis. 
+
+The Table for the CSV are as follows:
+
+Table Name | Number of Unique Ids | Is Removed | Reason for Removal
+---------- | -------------------- | ---------- | ------------------
+dailyActivity_merged | 33 | F | 
+dailyCalories_merged | 33 | T | Redundant Data
+dailyIntensities_merged | 33 | T | Redundant Data
+dailySteps_merged | 33 | T | Redundant Data
+heartrate_seconds_merged | 7 | T | Insufficient data 
+hourlyCalories_merged | 33 | F | 
+hourlyIntensities_merged | 33 | F |  
+hourlySteps_merged | 33 | F | 
+minuteCaloriesNarrow_merged | 27 | T | Not Required
+minuteCaloriesWide_merged | 33 | T | Not Required
+minuteIntensitiesNarrow_merged | 27 | T | Not Required
+minuteIntensitiesWide_merged | 33 | T | Not Required
+minutesMETsNarrow_merged | 27 | T | Not Required
+minuteSleep_merged | 24 | T | Insufficient data
+minuteStepsNarrow_merged | 27 | T | Not Required
+minuteStepsWide_merged | 33 | T | Not Required
+sleepDay_merged | 28 | F | 
+weightLogInfo | 8 | T | Insufficient data 
+
+---
+
+After excluding the datasets which are not required, we are left with the following:
+
+1. dailyActivity_merged
+2. sleepDay_merged
+3. hourlyCalories_merged
+4. hourlyIntensities_merged
+5. hourlySteps_merged
+
+---
+
+### Load The Libraries
+The Libraries required for the project are:
+
+1. tidyverse
+2. dplyr
+
+```{r setup}
+library(tidyverse)
+```
+
+---
+
+### Loading Dataset
+
+
+```{r Load Dataset}
+dailyActivity <- read.csv("C:/Users/kevin/Desktop/DA/Case Study DA/2/data/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+sleepDay <- read.csv("C:/Users/kevin/Desktop/DA/Case Study DA/2/data/Fitabase Data 4.12.16-5.12.16/sleepDay_merged.csv")
+hourlyCalories <- read.csv("C:/Users/kevin/Desktop/DA/Case Study DA/2/data/Fitabase Data 4.12.16-5.12.16/hourlyCalories_merged.csv")
+hourlyIntensities <- read.csv("C:/Users/kevin/Desktop/DA/Case Study DA/2/data/Fitabase Data 4.12.16-5.12.16/hourlyIntensities_merged.csv")
+hourlySteps <- read.csv("C:/Users/kevin/Desktop/DA/Case Study DA/2/data/Fitabase Data 4.12.16-5.12.16/hourlySteps_merged.csv")
+```
+
+---
+
+# Analyse
+
+In the Analyse Stage, We will be organize and format the data as well as analyse it.
+
+### Merge Hourly Activity Into hourlyActivity
+The hourly activity is required because having different hourly data is redundant and becomes difficult to manage when it comes to analysis and it becomes easy to compare different fields in hourly activity. 
+
+```{r Merge Hourly Data}
+hourlyActivity <- merge(hourlyCalories, hourlyIntensities, by = c("Id","ActivityHour"))
+hourlyActivity <- merge(hourlyActivity, hourlySteps, by = c("Id","ActivityHour"))
+rm(hourlySteps,hourlyCalories,hourlyIntensities)
+```
+
+---
+
+### Displaying Data
+Before Analysis, Lets display the data in each of the data frame. 
+
+```{r Top Data}
+#Head
+head(dailyActivity)
+head(hourlyActivity)
+head(sleepDay)
+```
+
+The data is loaded, the hourly activities are compiled into one and the datasets are displayed for the same.
+
+---
+
+
+
+### Data Transformation
+The Id and date types are inconsistent since Id data type is number but we require it to be categorical data and date type is also inconsistent. Hence, we will streamline the data and then perform other analysis.
+```{r Data Type Transformation}
+#Change ID to category type
+dailyActivity$Id <- as.character(dailyActivity$Id)
+hourlyActivity$Id <- as.character(hourlyActivity$Id)
+sleepDay$Id <- as.character(sleepDay$Id)
+
+#Date and Time Transformation
+dailyActivity$ActivityDate <- as.POSIXct(dailyActivity$ActivityDate, format = "%m/%d/%Y")
+
+hourlyActivity$ActivityHour <- as.POSIXct(hourlyActivity$ActivityHour, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+hourlyActivity$date <- format(hourlyActivity$ActivityHour, format = "%m/%d/%y")
+hourlyActivity$time <- format(hourlyActivity$ActivityHour, format = "%H:%M:%S")
+
+sleepDay$SleepDay <- as.POSIXct(sleepDay$SleepDay, format = "%m/%d/%Y %I:%M:%S %p", tz = Sys.timezone())
+```
+
+---
+
+### Summaries
+After the data transformation, we found that there are no duplicates as well as missing data in the chosen dataset. The summairs for their filds are as follows:
+```{r summary_1}
+#Summary
+summary(dailyActivity)
+```
+```{r summary_2}
+summary(hourlyActivity)
+```
+
+```{r summary_3}
+summary(sleepDay)
+```
+
+The data was found to be clean as well as consistent data. The data type was converted to the required type for analysis.
+
+--- 
+
+### Data Visualization
+
+```{r Pie Chart}
+
+VeryActive <- sum(dailyActivity$VeryActiveMinutes)
+FairlyActive <- sum(dailyActivity$FairlyActiveMinutes)
+LightlyActive <- sum(dailyActivity$LightlyActiveMinutes)
+
+
+Activity_df = data.frame(
+  "Activity_SUM" = c(VeryActive,FairlyActive,LightlyActive),
+  "Labels" = c("Very Active", "Fairly Active", "Lightly Active")
+  )
+
+ggplot(Activity_df, aes(x = "", y = Activity_SUM, fill = Labels)) + 
+  geom_bar(stat="identity", width=1) + 
+  coord_polar(theta = "y") +
+  labs(x = "", y = "", title = "Activity Plot") 
+
+```
+
+From the chart, we could infer that the users mostly are lightly activity.
+
+```{r Total Steps Boxplot}
+ggplot(dailyActivity) + 
+  geom_boxplot(aes(x = Id, y = TotalSteps, fill = Id)) + 
+  labs( x = "ID", y = "Total Steps", title = "Total Steps Vs ID") +
+  theme(axis.text.x = element_text(angle = 90), legend.position = "none") 
+```
+
+From the above plot we can infer that, most of the users takes less than 10,000 steps on an average daily. 
+
+
+```{r Calories Vs TotalSteps}
+ggplot(dailyActivity, aes(x = Calories, y = TotalSteps)) + 
+  geom_point() + 
+  labs( x = "Calories", y = "Total Steps", title = "Total Steps Vs Calories") +
+  geom_smooth()
+```
+
+The above plot tells us that the TotalSteps has a positive correlation with Calories, i.e, The more steps you take more calories your burn, even though it may vary from user to user because of their metabolism. 
+
+```{r mean_step Vs Time}
+ggplot(hourlyActivity %>% group_by(time) %>% summarise(mean_step=mean(StepTotal))) + 
+  geom_bar(aes(x = time, y = mean_step, fill = mean_step),stat = "identity") + 
+  labs( x = "Time", y = "Mean Steps", title = "Mean Steps Vs Time") +
+  theme(axis.text.x = element_text(angle = 90)) 
+```
+
+The average step count highest between 4 PM to 7 PM.
+
+```{r mean_sleep_hr Vs Id}
+ggplot(sleepDay %>% group_by(Id) %>% summarise(mean_sleep_hr = mean(TotalMinutesAsleep)/60)) + 
+  geom_bar(aes(x = Id, y = mean_sleep_hr, fill = mean_sleep_hr),stat = "identity") + 
+  labs( x = "ID", y = "Mean Sleep Hour", title = "Mean Sleep Hour Vs ID") +
+  theme(axis.text.x = element_text(angle = 90))  
+```
+
+According to the National Sleep Foundation, on an average an adult human requires sleep of 7 to 8 hours. Though the sample for sleep is available for 24 users only, It can be said that on average they sleep for 6.98 hours, from which we can say that there are users who do not meet the required standard when it comes to sleep.
+
+```{r mean_sleep_hr Vs SleepDay}
+ggplot(sleepDay %>% group_by(SleepDay) %>% summarise(mean_sleep_hr = mean(TotalMinutesAsleep)/60),
+       aes(x = SleepDay, y = mean_sleep_hr)) + 
+  geom_point() + 
+  geom_smooth() +
+  labs( x = "Date", y = "Mean Sleep Hour", title = "Mean Sleep Hour Vs Date") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ylim(5,9)
+  
+```
+
+```{r TotalMinutesAsleep Vs TotalTimeInBed}
+ggplot(sleepDay, aes(x = TotalMinutesAsleep, y = TotalTimeInBed)) + 
+  labs( x = "Total Minutes Asleep", y = "Total Time In Bed", 
+        title = "Total Minutes Asleep Vs Total Time In Bed") +
+  geom_point() + geom_smooth()
+```
+
+The data specifies that there is a correlation between sleep duration as well as time in bed, but in some cases people spend a lot time in bed before sleeping. Though it can be various number of reasons, we can assume that some of them may find it difficult to sleep.
+
+--- 
